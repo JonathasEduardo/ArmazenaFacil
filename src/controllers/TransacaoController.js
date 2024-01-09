@@ -84,24 +84,9 @@ class TransacaoController {
     });
   }
 
+  //Listar transções
   listarTransacoes(request, response) {
-    const { tipoTransacao } = request.query;
-  
-    // Validar se o tipo de transação fornecido é válido (opcional)
-    if (tipoTransacao && !["Entrada", "Saida"].includes(tipoTransacao)) {
-      return response.status(400).json({ error: 'Tipo de transação inválido' });
-    }
-  
-    // Construir a consulta base
-    let query = database.select("*").table("Transacoes");
-  
-    // Adicionar um filtro se o tipo de transação for fornecido
-    if (tipoTransacao) {
-      query = query.where({ Tipo: tipoTransacao });
-    }
-  
-    // Executar a consulta
-    query.then(transacoes => {
+    database.select("*").table("Transacoes").then(transacoes => {
       response.json(transacoes);
     }).catch(error => {
       console.log(error);
@@ -109,85 +94,142 @@ class TransacaoController {
     });
   }
 
-  listarUmaTransacao(request, response) {
-    const id = parseInt(request.params.id);
+  listarTransacaoEntradaPorId(request, response) {
+    const TransacaoID = parseInt(request.params.id);
   
-    // Validar se o ID é um número inteiro positivo
-    if (!Number.isInteger(id) || id <= 0) {
+    // Validar se o TransacaoID é um número inteiro positivo
+    if (!Number.isInteger(TransacaoID) || TransacaoID <= 0) {
       return response.status(400).json({ error: 'ID de transação inválido' });
     }
   
-    // Verificar se a transação com o ID fornecido existe no banco de dados
-    database.select("*").table("Transacoes").where({ TransacaoID: id }).then(transacoes => {
-      if (transacoes.length === 0) {
-        // Transação não encontrada, retornar status 404
-        return response.status(404).json({ error: 'Transação não encontrada' });
+    const query = database.select("*").table("Transacoes").where({ TransacaoID, Tipo: "Entrada" });
+  
+    // Executar a consulta
+    query.then(transacaoEntrada => {
+      if (transacaoEntrada.length === 0) {
+        return response.status(404).json({ error: 'Transação de entrada não encontrada' });
       }
-  
-      // Transação encontrada, determinar o tipo e adicionar ao objeto de resposta
-      const tipoTransacao = transacoes[0].Tipo;
-      const transacaoComTipo = { ...transacoes[0], TipoTransacao: tipoTransacao };
-  
-      // Retornar os detalhes da transação com o tipo
-      response.json(transacaoComTipo);
+      response.json(transacaoEntrada);
     }).catch(error => {
-      // Tratar erros no acesso ao banco de dados
       console.log(error);
-      response.status(500).json({ error: "Erro ao obter detalhes da transação" });
+      response.status(500).json({ error: `Erro ao listar transação de entrada para o TransacaoID ${TransacaoID}` });
     });
   }
-  atualizarTransacao(request, response) {
+  
+  listarTransacaoSaidaPorId(request, response) {
+    const TransacaoID = parseInt(request.params.id);
+  
+    // Validar se o TransacaoID é um número inteiro positivo
+    if (!Number.isInteger(TransacaoID) || TransacaoID <= 0) {
+      return response.status(400).json({ error: 'ID de transação inválido' });
+    }
+  
+    const query = database.select("*").table("Transacoes").where({ TransacaoID, Tipo: "Saida" });
+  
+    // Executar a consulta
+    query.then(transacaoSaida => {
+      if (transacaoSaida.length === 0) {
+        return response.status(404).json({ error: 'Transação de saída não encontrada' });
+      }
+      response.json(transacaoSaida);
+    }).catch(error => {
+      console.log(error);
+      response.status(500).json({ error: `Erro ao listar transação de saída para o TransacaoID ${TransacaoID}` });
+    });
+  }
+
+  atualizarTransacaoEntrada(request, response) {
     const id = parseInt(request.params.id);
-    const { ClienteID, ProdutoID, Tipo, Quantidade, DataHoraEntrada, DataHoraSaida } = request.body;
+    const { ClienteID, ProdutoID, Quantidade, DataHoraEntrada } = request.body;
 
     // Validar se o ID é um número inteiro positivo
     if (!Number.isInteger(id) || id <= 0) {
       return response.status(400).json({ error: 'ID de transação inválido' });
     }
 
-    // Verificar se a transação com o ID fornecido existe no banco de dados
-    database.select("*").table("Transacoes").where({ TransacaoID: id }).then(transacoes => {
-      if (transacoes.length === 0) {
-        // Transação não encontrada, retornar status 404
-        return response.status(404).json({ error: 'Transação não encontrada' });
+    // Verificar se a transação de entrada com o ID fornecido existe no banco de dados
+    database.select("*").table("Transacoes").where({ TransacaoID: id, Tipo: "Entrada" }).then(transacoesEntrada => {
+      if (transacoesEntrada.length === 0) {
+        // Transação de entrada não encontrada, retornar status 404
+        return response.status(404).json({ error: 'Transação de entrada não encontrada' });
       }
 
-      // Transação encontrada, dados são diferentes e campos são válidos, realizar a atualização
+      // Transação de entrada encontrada, dados são diferentes e campos são válidos, realizar a atualização
       const updatedFields = {};
 
       // Verificar se pelo menos um dos campos deve ser fornecido para atualização
-      if (ClienteID !== transacoes[0].ClienteID) updatedFields.ClienteID = ClienteID;
-      if (ProdutoID !== transacoes[0].ProdutoID) updatedFields.ProdutoID = ProdutoID;
-      if (Tipo !== transacoes[0].Tipo) updatedFields.Tipo = Tipo;
-      if (Quantidade !== transacoes[0].Quantidade) updatedFields.Quantidade = Quantidade;
-      if (DataHoraEntrada !== transacoes[0].DataHoraEntrada) updatedFields.DataHoraEntrada = DataHoraEntrada;
-      if (DataHoraSaida !== transacoes[0].DataHoraSaida) updatedFields.DataHoraSaida = DataHoraSaida;
+      if (ClienteID !== transacoesEntrada[0].ClienteID) updatedFields.ClienteID = ClienteID;
+      if (ProdutoID !== transacoesEntrada[0].ProdutoID) updatedFields.ProdutoID = ProdutoID;
+      if (Quantidade !== transacoesEntrada[0].Quantidade) updatedFields.Quantidade = Quantidade;
 
       if (
         updatedFields.ClienteID === undefined &&
         updatedFields.ProdutoID === undefined &&
-        updatedFields.Tipo === undefined &&
-        updatedFields.Quantidade === undefined &&
-        updatedFields.DataHoraEntrada === undefined &&
-        updatedFields.DataHoraSaida === undefined
+        updatedFields.Quantidade === undefined 
       ) {
         return response.status(400).json({ error: 'Pelo menos um dos campos deve ser modificado para realizar a atualização.' });
       }
 
       database.table("Transacoes").where({ TransacaoID: id }).update(updatedFields).then(updatedTransacao => {
-        response.json({ message: "Transação atualizada com sucesso" });
+        response.json({ message: "Transação de entrada atualizada com sucesso" });
       }).catch(error => {
         console.log(error);
-        response.status(500).json({ error: "Erro ao atualizar transação" });
+        response.status(500).json({ error: "Erro ao atualizar transação de entrada" });
       });
     }).catch(error => {
       // Tratar erros no acesso ao banco de dados
       console.log(error);
-      response.status(500).json({ error: "Erro ao obter detalhes da transação para atualização" });
+      response.status(500).json({ error: "Erro ao obter detalhes da transação de entrada para atualização" });
     });
   }
 
-  removerTransacao(request, response) {
+  atualizarTransacaoSaida(request, response) {
+    const id = parseInt(request.params.id);
+    const { ClienteID, ProdutoID, Quantidade, DataHoraSaida } = request.body;
+
+    // Validar se o ID é um número inteiro positivo
+    if (!Number.isInteger(id) || id <= 0) {
+      return response.status(400).json({ error: 'ID de transação inválido' });
+    }
+
+    // Verificar se a transação de saída com o ID fornecido existe no banco de dados
+    database.select("*").table("Transacoes").where({ TransacaoID: id, Tipo: "Saida" }).then(transacoesSaida => {
+      if (transacoesSaida.length === 0) {
+        // Transação de saída não encontrada, retornar status 404
+        return response.status(404).json({ error: 'Transação de saída não encontrada' });
+      }
+
+      // Transação de saída encontrada, dados são diferentes e campos são válidos, realizar a atualização
+      const updatedFields = {};
+
+      // Verificar se pelo menos um dos campos deve ser fornecido para atualização
+      if (ClienteID !== transacoesSaida[0].ClienteID) updatedFields.ClienteID = ClienteID;
+      if (ProdutoID !== transacoesSaida[0].ProdutoID) updatedFields.ProdutoID = ProdutoID;
+      if (Quantidade !== transacoesSaida[0].Quantidade) updatedFields.Quantidade = Quantidade;
+    
+
+      if (
+        updatedFields.ClienteID === undefined &&
+        updatedFields.ProdutoID === undefined &&
+        updatedFields.Quantidade === undefined 
+      ) {
+        return response.status(400).json({ error: 'Pelo menos um dos campos deve ser modificado para realizar a atualização.' });
+      }
+
+      database.table("Transacoes").where({ TransacaoID: id }).update(updatedFields).then(updatedTransacao => {
+        response.json({ message: "Transação de saída atualizada com sucesso" });
+      }).catch(error => {
+        console.log(error);
+        response.status(500).json({ error: "Erro ao atualizar transação de saída" });
+      });
+    }).catch(error => {
+      // Tratar erros no acesso ao banco de dados
+      console.log(error);
+      response.status(500).json({ error: "Erro ao obter detalhes da transação de saída para atualização" });
+    });
+  }
+
+  removerTransacaoEntrada(request, response) {
     const id = parseInt(request.params.id);
 
     // Validar se o ID é um número inteiro positivo
@@ -195,17 +237,40 @@ class TransacaoController {
       return response.status(400).json({ error: 'ID de transação inválido' });
     }
 
-    database.table("Transacoes").where({ TransacaoID: id }).del().then(rowsDeleted => {
+    database.table("Transacoes").where({ TransacaoID: id, Tipo: "Entrada" }).del().then(rowsDeleted => {
       if (rowsDeleted > 0) {
-        response.json({ message: "Transação removida com sucesso" });
+        response.json({ message: "Transação de entrada removida com sucesso" });
       } else {
-        response.status(404).json({ error: 'Transação não encontrada' });
+        response.status(404).json({ error: 'Transação de entrada não encontrada' });
       }
     }).catch(error => {
       console.log(error);
-      response.status(500).json({ error: "Erro ao remover transação" });
+      response.status(500).json({ error: "Erro ao remover transação de entrada" });
     });
   }
+
+  removerTransacaoSaida(request, response) {
+    const id = parseInt(request.params.id);
+
+    // Validar se o ID é um número inteiro positivo
+    if (!Number.isInteger(id) || id <= 0) {
+      return response.status(400).json({ error: 'ID de transação inválido' });
+    }
+
+    database.table("Transacoes").where({ TransacaoID: id, Tipo: "Saida" }).del().then(rowsDeleted => {
+      if (rowsDeleted > 0) {
+        response.json({ message: "Transação de saída removida com sucesso" });
+      } else {
+        response.status(404).json({ error: 'Transação de saída não encontrada' });
+      }
+    }).catch(error => {
+      console.log(error);
+      response.status(500).json({ error: "Erro ao remover transação de saída" });
+    });
+  }
+
+
+
 }
 
 module.exports = new TransacaoController();

@@ -21,9 +21,12 @@ router.delete('/deletar/produto/:id', ProdutoController.removerProduto);
 // Rotas para Transacao
 router.post('/novaTransacao/entrada', TransacaoController.novaTransacaoEntrada);
 router.post('/novaTransacao/saida', TransacaoController.novaTransacaoSaida);
-router.get('/transacoes', TransacaoController.listarTransacoes);
-router.get('/transacao/:id', TransacaoController.listarUmaTransacao);
-router.put('/atualizar/transacao/:id', TransacaoController.atualizarTransacao);
-router.delete('/deletar/transacao/:id', TransacaoController.removerTransacao);
+router.get('/transacoes',TransacaoController.listarTransacoes)
+router.get('/transacao/entrada/:id', TransacaoController.listarTransacaoEntradaPorId);
+router.get('/transacao/saida/:id', TransacaoController.listarTransacaoSaidaPorId);
+router.put('/atualizar/transacao/entrada/:id', TransacaoController.atualizarTransacaoEntrada);
+router.put('/atualizar/transacao/saida/:id', TransacaoController.atualizarTransacaoSaida);
+router.delete('/deletar/transacao/entrada/:id', TransacaoController.removerTransacaoEntrada);
+router.delete('/deletar/transacao/saida/:id', TransacaoController.removerTransacaoSaida);
 
 module.exports = router;
